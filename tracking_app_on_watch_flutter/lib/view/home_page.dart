@@ -20,7 +20,14 @@ class _HomePage extends State<HomePage> {
   }
 
   void startRecord() {
+    locationViewModel.startTime = DateTime.now();
+    locationViewModel.initPlatformState();
     locationViewModel.getLocationStreamData();
+  }
+
+  void stopRecord() {
+    locationViewModel.endTime = DateTime.now();
+    locationViewModel.onResetData();
   }
 
   @override
@@ -28,56 +35,108 @@ class _HomePage extends State<HomePage> {
     locationViewModel = Provider.of<LocationViewModel>(context, listen: true);
     return SafeArea(
       child: Scaffold(
-        body: Column(
-          children: [
-            Row(
+        body: Center(
+          child: Container(
+            padding: EdgeInsets.all(8.0),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+                border: Border.all(color: Colors.grey, width: 1),
+                borderRadius: BorderRadius.circular(32.0)),
+            width: 200,
+            height: 200,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Center(
-                  child: Text('${locationViewModel.distanceMoved.toString()} Km',
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Center(
+                      child: Text(
+                        '${locationViewModel.distanceMoved.toStringAsFixed(2)}',
+                        style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue),
+                      ),
+                    ),
+                    Text(
+                      'm',
                       style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue)),
+                          color: Colors.orange),
+                    ),
+                    Padding(padding: EdgeInsets.only(left: 8)),
+                    Center(
+                      child: Text(
+                          '${locationViewModel.velocity.toStringAsFixed(2)}',
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue)),
+                    ),
+                    Center(
+                      child: Text('Km/h',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange)),
+                    ),
+                  ],
                 ),
-                VerticalDivider(width: 100,),
+                Divider(height: 1),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Center(
+                      child: Text('${locationViewModel.steps.toString()}',
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue)),
+                    ),
+                    Center(
+                      child: Text(' steps',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange)),
+                    ),
+                  ],
+                ),
                 Center(
-                  child: Text('${locationViewModel.velocity.toString()} Km/h',
-                      style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue)),
+                  child: Text(
+                      "Current:\nlat:${locationViewModel.currentLocation?.latitude},\nlon:${locationViewModel.currentLocation?.longitude}"),
                 ),
+                // Center(
+                //   child: Text(
+                //       "Last known:${locationViewModel.lastKnownLocation?.latitude},${locationViewModel.lastKnownLocation?.longitude}"),
+                // ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                        onPressed: () {
+                          print('Start record');
+                          startRecord();
+                        },
+                        child: Text("Start")),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(primary: Colors.red),
+                          onPressed: () {
+                            print('Stop record');
+                            stopRecord();
+                          },
+                          child: Text("Stop")),
+                    )
+                  ],
+                )
               ],
             ),
-            Divider(height: 1),
-            Center(
-              child: Text('${locationViewModel.steps.toString()} steps',
-                  style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue)),
-            ),
-            Center(
-              child: Text(
-                  "Current location:${locationViewModel.currentLocation?.latitude},${locationViewModel.currentLocation?.longitude}"),
-            ),
-            Center(
-              child: Text(
-                  "Last known location:${locationViewModel.lastKnownLocation?.latitude},${locationViewModel.lastKnownLocation?.longitude}"),
-            ),
-            ElevatedButton(
-                onPressed: () {
-                  print('Start record');
-                  startRecord();
-                },
-                child: Text("Start")),
-            ElevatedButton(
-                onPressed: () {
-                  print('Stop record');
-                  startRecord();
-                },
-                child: Text("Stop"))
-          ],
+          ),
         ),
       ),
     );

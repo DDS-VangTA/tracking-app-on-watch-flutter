@@ -31,9 +31,20 @@ class LocationViewModel extends BaseViewModel {
   late Stream<StepCount> stepCountStream;
   late Stream<PedestrianStatus> _pedestrianStatusStream;
   String status = '?', steps = '?';
+  DateTime startTime = DateTime.now();
+  DateTime endTime = DateTime.now();
 
   @override
-  FutureOr<void> init() {}
+  FutureOr<void> init() {
+    //change location setting
+    changeLocationSetting();
+  }
+
+  void changeLocationSetting() {
+    location.changeSettings(
+        accuracy: locationPre.LocationAccuracy.high,
+        distanceFilter: 2);
+  }
 
   Future<void> checkLocationService() async {
     print("call check location service");
@@ -55,14 +66,15 @@ class LocationViewModel extends BaseViewModel {
         return;
       }
     }
-    location.enableBackgroundMode(enable: true);
+    // location.enableBackgroundMode(enable: true);
     currentLocation = (await location.getLocation());
     notifyListeners();
   }
 
   void getLocationStreamData() {
     location.onLocationChanged.listen((locationPre.LocationData newLocation) {
-      print("add new location:$newLocation");
+      print(
+          "add new location:${newLocation.latitude},${newLocation.longitude}");
       currentLocation = newLocation;
       locationList.add(newLocation);
       calculateDistanceMoved();
@@ -93,11 +105,11 @@ class LocationViewModel extends BaseViewModel {
 
   calculateDistanceMoved() async {
     if (locationList.length >= 2) {
-      distanceMoved += Geolocator.distanceBetween(
+      distanceMoved += (Geolocator.distanceBetween(
           locationList[locationList.length - 2].latitude!,
           locationList[locationList.length - 2].longitude!,
           locationList.last.latitude!,
-          locationList.last.longitude!);
+          locationList.last.longitude!));
       notifyListeners();
     }
   }
@@ -126,18 +138,31 @@ class LocationViewModel extends BaseViewModel {
 
   void onStepCount(StepCount event) {
     print("step count event:$event");
-    steps = 0.toString();
-    if (event.timeStamp.hour == DateTime.now().hour &&
-        event.timeStamp.day == DateTime.now().day) {
+    print("start time:${startTime}");
+    print("end time:${endTime}");
+    print("step timestap:${event.timeStamp}");
+    print(
+        "compare timestap with start time:${event.timeStamp.isAfter(startTime)}");
+    print(
+        "compare timestap with current time:${event.timeStamp.isBefore(DateTime.now())}");
+
+    // if (event.timeStamp.isAfter(startTime) &&
+    //     event.timeStamp.isBefore(DateTime.now())) {
+    //   stepsCount++;
       steps = event.steps.toString();
-    }
+    // }
+    // if (event.timeStamp.isAfter(startTime) &&
+    //     event.timeStamp.isBefore(DateTime.now())) {
+    //   steps = event.steps.toString();
+    // } else {
+    //   steps = 0.toString();
+    // }
     notifyListeners();
   }
 
   void onPedestrianStatusChanged(PedestrianStatus event) {
     print("PedestrianStatus event:$event");
     status = event.status;
-    DateTime timeStamp = event.timeStamp;
     notifyListeners();
   }
 
@@ -156,8 +181,6 @@ class LocationViewModel extends BaseViewModel {
 
   Future<void> initPlatformState() async {
     print("call do steps count");
-    steps = 0.toString();
-    status = '?';
     if (await Permission.activityRecognition.request().isGranted) {
       _pedestrianStatusStream = Pedometer.pedestrianStatusStream;
       _pedestrianStatusStream
