@@ -20,14 +20,17 @@ class _HomePage extends State<HomePage> {
   }
 
   void startRecord() {
+    locationViewModel.stepsCount = 0;
     locationViewModel.startTime = DateTime.now();
     locationViewModel.initPlatformState();
     locationViewModel.getLocationStreamData();
+    locationViewModel.listenStepsSensorsCount();
   }
 
   void stopRecord() {
     locationViewModel.endTime = DateTime.now();
     locationViewModel.onResetData();
+    locationViewModel.saveStepsPreData(locationViewModel.allSteps);
   }
 
   @override
@@ -39,11 +42,11 @@ class _HomePage extends State<HomePage> {
           child: Container(
             padding: EdgeInsets.all(8.0),
             decoration: BoxDecoration(
-              color: Colors.black54,
+                color: Colors.black54,
                 border: Border.all(color: Colors.grey, width: 1),
                 borderRadius: BorderRadius.circular(32.0)),
             width: 200,
-            height: 200,
+            height: 240,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -51,30 +54,35 @@ class _HomePage extends State<HomePage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Center(
-                      child: Text(
-                        '${locationViewModel.distanceMoved.toStringAsFixed(2)}',
-                        style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          (locationViewModel.distanceMoved / 1000)
+                              .toStringAsFixed(2),
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue),
+                        ),
                       ),
                     ),
                     Text(
-                      'm',
+                      'Km',
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: Colors.orange),
                     ),
                     Padding(padding: EdgeInsets.only(left: 8)),
-                    Center(
-                      child: Text(
-                          '${locationViewModel.velocity.toStringAsFixed(2)}',
-                          style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue)),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                            '${locationViewModel.velocity.toStringAsFixed(2)}',
+                            style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue)),
+                      ),
                     ),
                     Center(
                       child: Text('Km/h',
@@ -89,15 +97,16 @@ class _HomePage extends State<HomePage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Center(
-                      child: Text('${locationViewModel.steps.toString()}',
+                    Expanded(
+                        child: Center(
+                      child: Text(locationViewModel.stepsCount.toString(),
                           style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: Colors.blue)),
-                    ),
+                    )),
                     Center(
-                      child: Text(' steps',
+                      child: Text('record steps',
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -105,10 +114,52 @@ class _HomePage extends State<HomePage> {
                     ),
                   ],
                 ),
-                Center(
-                  child: Text(
-                      "Current:\nlat:${locationViewModel.currentLocation?.latitude},\nlon:${locationViewModel.currentLocation?.longitude}"),
+                Divider(height: 1),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                        child: Center(
+                      child: Text(locationViewModel.allSteps.toString(),
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue)),
+                    )),
+                    Center(
+                      child: Text(' daily steps',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange)),
+                    ),
+                  ],
                 ),
+                Divider(height: 1),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                        child: Center(
+                      child: Text(locationViewModel.stepsSensors.toString(),
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue)),
+                    )),
+                    Center(
+                      child: Text(' sensors steps',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange)),
+                    ),
+                  ],
+                ),
+                // Center(
+                //   child: Text(
+                //       "Current:\nlat:${locationViewModel.currentLocation?.latitude},\nlon:${locationViewModel.currentLocation?.longitude}"),
+                // ),
                 // Center(
                 //   child: Text(
                 //       "Last known:${locationViewModel.lastKnownLocation?.latitude},${locationViewModel.lastKnownLocation?.longitude}"),

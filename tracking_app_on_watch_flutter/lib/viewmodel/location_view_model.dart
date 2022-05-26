@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:geolocator/geolocator.dart';
 import 'package:location/location.dart' as locationPre;
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:sensors_plus/sensors_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../base/viewmodel.dart';
 import '../utilitis/number_const.dart';
@@ -27,10 +30,12 @@ class LocationViewModel extends BaseViewModel {
 
   double velocity = 0.0;
   double distanceMoved = 0.0;
-  double stepsCount = 0;
+  int previousSteps = 0;
+  int stepsCount = 0;
   late Stream<StepCount> stepCountStream;
   late Stream<PedestrianStatus> _pedestrianStatusStream;
-  String status = '?', steps = '?';
+  String status = '?';
+  int allSteps = 0;
   DateTime startTime = DateTime.now();
   DateTime endTime = DateTime.now();
 
@@ -42,8 +47,7 @@ class LocationViewModel extends BaseViewModel {
 
   void changeLocationSetting() {
     location.changeSettings(
-        accuracy: locationPre.LocationAccuracy.high,
-        distanceFilter: 2);
+        accuracy: locationPre.LocationAccuracy.high, distanceFilter: 2);
   }
 
   Future<void> checkLocationService() async {
@@ -66,7 +70,7 @@ class LocationViewModel extends BaseViewModel {
         return;
       }
     }
-    // location.enableBackgroundMode(enable: true);
+    location.enableBackgroundMode(enable: true);
     currentLocation = (await location.getLocation());
     notifyListeners();
   }
@@ -98,18 +102,21 @@ class LocationViewModel extends BaseViewModel {
     velocity = 0.0;
     distanceMoved = 0.0;
     stepsCount = 0;
-    steps = 0.toString();
     status = '?';
+    stepsSensors = 0;
     notifyListeners();
   }
 
   calculateDistanceMoved() async {
     if (locationList.length >= 2) {
-      distanceMoved += (Geolocator.distanceBetween(
+      double tempDistance = (Geolocator.distanceBetween(
           locationList[locationList.length - 2].latitude!,
           locationList[locationList.length - 2].longitude!,
           locationList.last.latitude!,
           locationList.last.longitude!));
+      if (tempDistance >= 2.0) {
+        distanceMoved += tempDistance;
+      }
       notifyListeners();
     }
   }
@@ -138,25 +145,10 @@ class LocationViewModel extends BaseViewModel {
 
   void onStepCount(StepCount event) {
     print("step count event:$event");
-    print("start time:${startTime}");
-    print("end time:${endTime}");
-    print("step timestap:${event.timeStamp}");
-    print(
-        "compare timestap with start time:${event.timeStamp.isAfter(startTime)}");
-    print(
-        "compare timestap with current time:${event.timeStamp.isBefore(DateTime.now())}");
-
-    // if (event.timeStamp.isAfter(startTime) &&
-    //     event.timeStamp.isBefore(DateTime.now())) {
-    //   stepsCount++;
-      steps = event.steps.toString();
-    // }
-    // if (event.timeStamp.isAfter(startTime) &&
-    //     event.timeStamp.isBefore(DateTime.now())) {
-    //   steps = event.steps.toString();
-    // } else {
-    //   steps = 0.toString();
-    // }
+    getPreviousStep();
+    print("on step count previous:$previousSteps");
+    stepsCount = event.steps - previousSteps;
+    allSteps = event.steps;
     notifyListeners();
   }
 
@@ -175,7 +167,9 @@ class LocationViewModel extends BaseViewModel {
 
   void onStepCountError(error) {
     print('onStepCountError: $error');
-    steps = 'Step Count not available';
+    // steps = 'Step Count not available';
+    allSteps = 0;
+    stepsCount = 0;
     notifyListeners();
   }
 
@@ -194,5 +188,53 @@ class LocationViewModel extends BaseViewModel {
       print("request activity recognition");
       await Permission.activityRecognition.request();
     }
+  }
+
+  void saveStepsPreData(int steps) async {
+    print("pre steps to save:$steps");
+    SharedPreferences _pref = await SharedPreferences.getInstance();
+    _pref.setInt('previous_steps', steps);
+  }
+
+  void getPreviousStep() async {
+    SharedPreferences _pref = await SharedPreferences.getInstance();
+    previousSteps = _pref.getInt("previous_steps") ?? 0;
+    print("pre steps get:$previousSteps");
+  }
+
+  // count steps by sensors_plus
+  double x = 0.0;
+  double y = 0.0;
+  double z = 0.0;
+  int stepsSensors = 0;
+  double exactDistance = 0.0;
+  double previousDistance = 0.0;
+
+  void listenStepsSensorsCount() {
+    SensorsPlatform.instance.accelerometerEvents.listen((event) {
+      exactDistance = calculateMagnitude(event.x, event.y, event.z);
+      if (exactDistance > 6) {
+        stepsSensors++;
+      }
+    });
+  }
+
+  double calculateMagnitude(double x, double y, double z) {
+    double distance = sqrt(x * x + y * y + z * z);
+    getPreviousValue();
+    double mode = distance - previousDistance;
+    setprefData(distance);
+    return mode;
+  }
+
+  void setprefData(double predistance) async {
+    SharedPreferences _pref = await SharedPreferences.getInstance();
+    _pref.setDouble("previousDistance", predistance);
+  }
+
+  void getPreviousValue() async {
+    SharedPreferences _pref = await SharedPreferences.getInstance();
+    previousDistance = _pref.getDouble("previousDistance") ?? 0;
+    notifyListeners();
   }
 }
