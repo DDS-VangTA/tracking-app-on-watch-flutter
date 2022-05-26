@@ -7,6 +7,7 @@ import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tracking_app_on_watch_flutter/model/record_status.dart';
 
 import '../base/viewmodel.dart';
 import '../utilitis/number_const.dart';
@@ -38,6 +39,14 @@ class LocationViewModel extends BaseViewModel {
   int allSteps = 0;
   DateTime startTime = DateTime.now();
   DateTime endTime = DateTime.now();
+  RecordStatus recordStatus = RecordStatus.NONE;
+
+  bool flag = true;
+  late Stream<int> timerStream;
+  late StreamSubscription<int> timerSubscription;
+  String hoursStr = '00';
+  String minutesStr = '00';
+  String secondsStr = '00';
 
   @override
   FutureOr<void> init() {
@@ -75,6 +84,11 @@ class LocationViewModel extends BaseViewModel {
     notifyListeners();
   }
 
+  void onRecordStatusChanged(RecordStatus status) {
+    recordStatus = status;
+    notifyListeners();
+  }
+
   void getLocationStreamData() {
     location.onLocationChanged.listen((locationPre.LocationData newLocation) {
       print(
@@ -103,7 +117,6 @@ class LocationViewModel extends BaseViewModel {
     distanceMoved = 0.0;
     stepsCount = 0;
     status = '?';
-    stepsSensors = 0;
     notifyListeners();
   }
 
@@ -147,6 +160,10 @@ class LocationViewModel extends BaseViewModel {
     print("step count event:$event");
     getPreviousStep();
     print("on step count previous:$previousSteps");
+    //the first time received event
+    if (previousSteps == 0) {
+      saveStepsPreData(event.steps);
+    }
     stepsCount = event.steps - previousSteps;
     allSteps = event.steps;
     notifyListeners();
@@ -202,39 +219,45 @@ class LocationViewModel extends BaseViewModel {
     print("pre steps get:$previousSteps");
   }
 
-  // count steps by sensors_plus
-  double x = 0.0;
-  double y = 0.0;
-  double z = 0.0;
-  int stepsSensors = 0;
-  double exactDistance = 0.0;
-  double previousDistance = 0.0;
+  // count time moving
+  Stream<int> stopWatchStream() {
+    StreamController<int>? streamController;
+    Timer? timer;
+    Duration timerInterval = Duration(seconds: 1);
+    int counter = 0;
 
-  void listenStepsSensorsCount() {
-    SensorsPlatform.instance.accelerometerEvents.listen((event) {
-      exactDistance = calculateMagnitude(event.x, event.y, event.z);
-      if (exactDistance > 6) {
-        stepsSensors++;
+    void stopTimer() {
+      if (timer != null) {
+        timer?.cancel();
+        timer = null;
+        counter = 0;
+        streamController?.close();
       }
-    });
-  }
+    }
 
-  double calculateMagnitude(double x, double y, double z) {
-    double distance = sqrt(x * x + y * y + z * z);
-    getPreviousValue();
-    double mode = distance - previousDistance;
-    setprefData(distance);
-    return mode;
-  }
+    void pauseTimer(){
+      stopTimer();
+    }
 
-  void setprefData(double predistance) async {
-    SharedPreferences _pref = await SharedPreferences.getInstance();
-    _pref.setDouble("previousDistance", predistance);
-  }
+    void tick(_) {
+      counter++;
+      streamController?.add(counter);
+      if (!flag) {
+        stopTimer();
+      }
+    }
 
-  void getPreviousValue() async {
-    SharedPreferences _pref = await SharedPreferences.getInstance();
-    previousDistance = _pref.getDouble("previousDistance") ?? 0;
-    notifyListeners();
+    void startTimer() {
+      timer = Timer.periodic(timerInterval, tick);
+    }
+
+    streamController = StreamController<int>(
+      onListen: startTimer,
+      onCancel: stopTimer,
+      onResume: startTimer,
+      onPause: stopTimer,
+    );
+
+    return streamController.stream;
   }
 }
