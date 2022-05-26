@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:tracking_app_on_watch_flutter/model/record_status.dart';
 
@@ -18,7 +17,6 @@ class _HomePage extends State<HomePage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       locationViewModel.checkLocationService();
-      locationViewModel.timerStream = locationViewModel.stopWatchStream();
     });
   }
 
@@ -28,17 +26,14 @@ class _HomePage extends State<HomePage> {
     locationViewModel.initPlatformState();
     locationViewModel.getLocationStreamData();
     locationViewModel.onRecordStatusChanged(RecordStatus.RECORDING);
-    startListenTimeMoving();
   }
 
   void pauseRecord() {
     locationViewModel.onRecordStatusChanged(RecordStatus.PAUSE);
-    pauseListenTimeMoving();
   }
 
   void resumeRecord() {
     locationViewModel.onRecordStatusChanged(RecordStatus.RECORDING);
-    resumeListenTimeMoving();
   }
 
   void finishRecord() {
@@ -46,40 +41,6 @@ class _HomePage extends State<HomePage> {
     locationViewModel.onResetData();
     locationViewModel.saveStepsPreData(locationViewModel.allSteps);
     locationViewModel.onRecordStatusChanged(RecordStatus.NONE);
-    stopListenTimeMoving();
-  }
-
-  void startListenTimeMoving() {
-    locationViewModel.timerSubscription =
-        locationViewModel.timerStream.listen((int newTick) {
-      setState(() {
-        locationViewModel.hoursStr =
-            ((newTick / (60 * 60)) % 60).floor().toString().padLeft(2, '0');
-        locationViewModel.minutesStr =
-            ((newTick / 60) % 60).floor().toString().padLeft(2, '0');
-        locationViewModel.secondsStr =
-            (newTick % 60).floor().toString().padLeft(2, '0');
-      });
-    });
-  }
-
-  void stopListenTimeMoving() {
-    locationViewModel.timerSubscription.cancel();
-    // locationViewModel.timerStream.dispose();
-    setState(() {
-      locationViewModel.hoursStr = '00';
-      locationViewModel.minutesStr = '00';
-      locationViewModel.secondsStr = '00';
-    });
-  }
-
-  void pauseListenTimeMoving() {
-    locationViewModel.timerSubscription.pause();
-  }
-
-  void resumeListenTimeMoving() {
-    print("call resume listen moving time");
-    locationViewModel.timerSubscription.resume();
   }
 
   @override
@@ -100,27 +61,6 @@ class _HomePage extends State<HomePage> {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                        child: Center(
-                      child: Text(
-                          '${locationViewModel.hoursStr}:${locationViewModel.minutesStr}:${locationViewModel.secondsStr}',
-                          style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue)),
-                    )),
-                    const Center(
-                      child: Text('moving time',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange)),
-                    ),
-                  ],
-                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

@@ -1,11 +1,9 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:geolocator/geolocator.dart';
 import 'package:location/location.dart' as locationPre;
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:sensors_plus/sensors_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tracking_app_on_watch_flutter/model/record_status.dart';
 
@@ -40,13 +38,6 @@ class LocationViewModel extends BaseViewModel {
   DateTime startTime = DateTime.now();
   DateTime endTime = DateTime.now();
   RecordStatus recordStatus = RecordStatus.NONE;
-
-  bool flag = true;
-  late Stream<int> timerStream;
-  late StreamSubscription<int> timerSubscription;
-  String hoursStr = '00';
-  String minutesStr = '00';
-  String secondsStr = '00';
 
   @override
   FutureOr<void> init() {
@@ -217,47 +208,5 @@ class LocationViewModel extends BaseViewModel {
     SharedPreferences _pref = await SharedPreferences.getInstance();
     previousSteps = _pref.getInt("previous_steps") ?? 0;
     print("pre steps get:$previousSteps");
-  }
-
-  // count time moving
-  Stream<int> stopWatchStream() {
-    StreamController<int>? streamController;
-    Timer? timer;
-    Duration timerInterval = Duration(seconds: 1);
-    int counter = 0;
-
-    void stopTimer() {
-      if (timer != null) {
-        timer?.cancel();
-        timer = null;
-        counter = 0;
-        streamController?.close();
-      }
-    }
-
-    void pauseTimer(){
-      stopTimer();
-    }
-
-    void tick(_) {
-      counter++;
-      streamController?.add(counter);
-      if (!flag) {
-        stopTimer();
-      }
-    }
-
-    void startTimer() {
-      timer = Timer.periodic(timerInterval, tick);
-    }
-
-    streamController = StreamController<int>(
-      onListen: startTimer,
-      onCancel: stopTimer,
-      onResume: startTimer,
-      onPause: stopTimer,
-    );
-
-    return streamController.stream;
   }
 }
